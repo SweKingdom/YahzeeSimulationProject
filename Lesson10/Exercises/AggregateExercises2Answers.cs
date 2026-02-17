@@ -8,7 +8,7 @@ public static class AggregateExercises2Answers
     {
         Console.WriteLine("=== Aggregate Exercises 2 - ANSWERS ===\n");
 
-        Exercise1_RemoveNumbersInLoop3_Answer();
+        //Exercise1_RemoveNumbersInLoop3_Answer();
         Exercise2_DistributeNumbersToPlayers_Answer();
     }
 
@@ -68,7 +68,6 @@ public static class AggregateExercises2Answers
         
         Console.WriteLine($"\nFinal numbers remaining: [{string.Join(", ", resultLoop1.Item1)}]");
         Console.WriteLine($"Numbers removed: {27 - resultLoop1.Item1.Count}");
-        Console.WriteLine($"\nAll loop iterations:\n{string.Join("\n", resultLoop1.Item2)}\n");
     }
 
     // Exercise 2 ANSWER: Pass both numbers and players to Loop3, remove last number and give it to a player
@@ -89,26 +88,25 @@ public static class AggregateExercises2Answers
         // Solution: Thread both numbers and players through all loops, with a counter for distribution
         var resultLoop1 = Enumerable.Range(1, 3)
             .Aggregate(
-                (numbers, players, 0, ImmutableList<string>.Empty),    // State: (numbers, players, counter, results)
+                (numbers, players),    // State: (numbers, players)
                 (stateLoop1, idxLoop1) =>
                 {
                     Console.WriteLine($"Loop1 iteration: {idxLoop1}");
                     
                     var resultLoop2 = Enumerable.Range(1, 3)
                         .Aggregate(
-                            (stateLoop1.Item1, stateLoop1.Item2, stateLoop1.Item3, ImmutableList<string>.Empty), // Pass all state from Loop1
+                            (stateLoop1.Item1, stateLoop1.Item2), // Pass all state from Loop1
                             (stateLoop2, idxLoop2) =>
                             {
                                 Console.WriteLine($"   Loop2 iteration: {idxLoop2}");
 
                                 var resultLoop3 = Enumerable.Range(1, 3)
                                     .Aggregate(
-                                        (stateLoop2.Item1, stateLoop2.Item2, stateLoop2.Item3, ImmutableList<string>.Empty), // Pass all state from Loop2
+                                        (stateLoop2.Item1, stateLoop2.Item2), // Pass all state from Loop2
                                         (stateLoop3, idxLoop3) =>
                                         {
                                             var currentNumbers = stateLoop3.Item1;
                                             var currentPlayers = stateLoop3.Item2;
-                                            var counter = stateLoop3.Item3;
                                             
                                             // Remove the last number if available
                                             if (currentNumbers.Count > 0)
@@ -116,34 +114,31 @@ public static class AggregateExercises2Answers
                                                 var drawnNumber = currentNumbers[currentNumbers.Count - 1];
                                                 var updatedNumbers = currentNumbers.RemoveAt(currentNumbers.Count - 1);
                                                 
-                                                // Determine which player gets the number (round-robin)
-                                                var playerIndex = counter % currentPlayers.Count;
-                                                var (playerName, playerNumbers) = currentPlayers[playerIndex];
-                                                
                                                 // Add the drawn number to the player's list
-                                                var updatedPlayerNumbers = playerNumbers.Add(drawnNumber);
-                                                var updatedPlayers = currentPlayers.SetItem(playerIndex, (playerName, updatedPlayerNumbers));
+                                                var playerIndex = idxLoop3 - 1;
+                                                var updatedPlayer = (currentPlayers[playerIndex].Item1, currentPlayers[playerIndex].Item2.Add(drawnNumber));
+                                                var updatedPlayers = currentPlayers.SetItem(playerIndex, updatedPlayer);
                                                 
-                                                Console.WriteLine($"      Loop3 iteration: {idxLoop3} - {playerName} receives {drawnNumber}");
+                                                Console.WriteLine($"      Loop3 iteration: {idxLoop3} - {updatedPlayers[playerIndex].Item1} receives {drawnNumber}");
                                                 
-                                                var newStateLoop3 = (updatedNumbers, updatedPlayers, counter + 1, stateLoop3.Item4.Add($"{idxLoop1} - {idxLoop2} - {idxLoop3}"));
+                                                var newStateLoop3 = (updatedNumbers, updatedPlayers);
                                                 return newStateLoop3;
                                             }
                                             else
                                             {
                                                 Console.WriteLine($"      Loop3 iteration: {idxLoop3} - No numbers left!");
-                                                var newStateLoop3 = (currentNumbers, currentPlayers, counter, stateLoop3.Item4.Add($"{idxLoop1} - {idxLoop2} - {idxLoop3}"));
+                                                var newStateLoop3 = (currentNumbers, currentPlayers);
                                                 return newStateLoop3;
                                             }
                                         });
 
                                 // Pass modified state up from Loop3
-                                var newStateLoop2 = (resultLoop3.Item1, resultLoop3.Item2, resultLoop3.Item3, stateLoop2.Item4.AddRange(resultLoop3.Item4));
+                                var newStateLoop2 = (resultLoop3.Item1, resultLoop3.Item2);
                                 return newStateLoop2;
                             });
                     
                     // Pass modified state up from Loop2
-                    var newStateLoop1 = (resultLoop2.Item1, resultLoop2.Item2, resultLoop2.Item3, stateLoop1.Item4.AddRange(resultLoop2.Item4));
+                    var newStateLoop1 = (resultLoop2.Item1, resultLoop2.Item2);
                     return newStateLoop1;
                 });
         
