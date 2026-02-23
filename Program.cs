@@ -11,7 +11,10 @@ Console.WriteLine("Hello Playground!");
 //Playground.Lesson07.Main07.Entry();
 //Playground.Lesson08.Main08.Entry();
 //Playground.Lesson09.Main09.Entry();
-Playground.Lesson10.Main10.Entry();
+//Playground.Lesson10.Main10.Entry();
+
+Playground.Lesson11.Main11.Entry();
+await Playground.Lesson11.Main11.EntryAsync();
 
 // Playground.Projects.YahtzeeProject.Entry();
-// Playground.Projects.PokerProject.Entry();   
+//Playground.Projects.PokerProject.Entry();   
