@@ -3,7 +3,8 @@ This is a fully functioning 13 round Yahtzee Simulator built with functional pro
 Requirements are net10.0
 
 How to Run
-**1.Clone the repository**
+
+**1. Clone the repository**
 Use the command in your console:
 git clone https://github.com/SweKingdom/YahzeeSimulationProject.git
 
