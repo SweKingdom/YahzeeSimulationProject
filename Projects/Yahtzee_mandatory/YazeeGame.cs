@@ -19,13 +19,11 @@ public static class YahzeeGame
         
         var yahzeeCup = new YahzeeCup();
         Console.WriteLine($"Yahzee Cup with 5 dice: {yahzeeCup}\n");  
-
-        // Use Compose to build a reusable roll-and-score pipeline as a single function
+        
         Func<YahzeeCup, YahzeeCup> rollAndPickBest =
             new Func<YahzeeCup, YahzeeCup>(cup => cup.ShakeAndRoll())
                 .Compose(cup => cup.GetYahtzeeCombination());
         
-        // Roll 10 times using Aggregate, applying the composed function each iteration
         Enumerable.Range(1, 10)
             .Aggregate(yahzeeCup, (currentCup, i) =>
                 currentCup
@@ -45,14 +43,6 @@ public static class YahzeeGame
         System.Console.WriteLine("Your code should implement the Yahtzee round simulation below.");
         System.Console.WriteLine("========================");
         
-        
-
-        // Implement a Yahtzee round simulation here using functional patterns
-
-        // use existing monadic extensions and functional patterns
-        // minimize imperative code, maximize declative code using LINQ and extension methods
-        
-        // Build initial game state: each player gets an empty ScoreCard
         Enumerable.Range(1, 13)
             .Aggregate(
                 new GameState(
@@ -68,7 +58,7 @@ public static class YahzeeGame
             .Tap(PrintFinalResults);
 
     }
-    // Advance state by having every player roll and score
+    
     private static GameState PlayRound(GameState state) =>
         state with
         {
@@ -77,8 +67,6 @@ public static class YahzeeGame
                 .ToImmutableList()
         };
     
-    // Roll the cup, then use Fork to independently extract the cup and the best combo,
-    // combining both into a new PlayerState in one functional step
     private static PlayerState ProcessPlayerTurn(PlayerState ps) =>
         ps.Player.YahzeeCup
             .ShakeAndRoll()
@@ -88,20 +76,17 @@ public static class YahzeeGame
                 (cup, combo) => BuildPlayerState(ps, cup, combo)
             );
     
-    // Builds the updated PlayerState, applying Yahtzee bonus when applicable
     private static PlayerState BuildPlayerState(
         PlayerState ps, YahzeeCup cup, (string Category, int Score) combo)
     {
         bool rolledYahtzee    = cup.dice.GroupBy(d => d.Pip).Any(g => g.Count() == 5);
         bool yahtzeeAlreadyWon = ps.ScoreCard.Scores.TryGetValue("Yahtzee", out var ys) && ys == 50;
 
-        return new PlayerState(
-            ps.Player with { YahzeeCup = cup },
-            ps.ScoreCard
-                .AddScore(combo.Category, combo.Score)
-                .Map(sc => rolledYahtzee && yahtzeeAlreadyWon ? sc.AddYahtzeeBonus() : sc),
-            combo.Category,
-            combo.Score);
+        var scoreCard = ps.ScoreCard.AddScore(combo.Category, combo.Score);
+        if (rolledYahtzee && yahtzeeAlreadyWon)
+            scoreCard = scoreCard.AddYahtzeeBonus();
+        
+        return new PlayerState(ps.Player with { YahzeeCup = cup }, scoreCard, combo.Category, combo.Score);
     }
     
     private static void PrintRoundResults(GameState state, int round)
@@ -109,21 +94,15 @@ public static class YahzeeGame
         state.PlayerStates
             .Tap(ps => ps.ToList().ForEach(p =>
                 Console.WriteLine(
-                    $"  {p.Player.Name,-10}: [{p.Player.YahzeeCup}]  →  {p.LastCategory} ({p.LastScore} pts)")));
+                    $"  {p.Player.Name,-10}: [{p.Player.YahzeeCup}]  ->  {p.LastCategory} ({p.LastScore} pts)")));
 
         var maxScore = state.PlayerStates.Max(p => p.LastScore);
 
-        // Use Alt: attempt a unique-winner message (returns null on tie), fall back to tie message
-        state.PlayerStates
-            .Where(p => p.LastScore == maxScore)
-            .ToList()
-            .Alt<List<PlayerState>, string>(
-                winners => winners.Count == 1
-                    ? $"  >> Round {round} winner: {winners[0].Player.Name} with {winners[0].LastScore} pts!"
-                    : null,
-                winners => $"  >> Round {round}: Tie! ({winners[0].LastScore} pts each)"
-            )
-            .Tap(Console.WriteLine);
+        var winners = state.PlayerStates.Where(p => p.LastScore == maxScore).ToList();
+        var msg = winners.Count == 1
+            ? $"  >> Round {round} winner: {winners[0].Player.Name} with {winners[0].LastScore} pts!"
+            : $"  >> Round {round}: Tie! ({winners[0].LastScore} pts each)";
+        Console.WriteLine(msg);
     }
     
     private static readonly string[] CategoryOrder =

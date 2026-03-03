@@ -1,6 +1,4 @@
 using System.Collections.Immutable;
-using System.Runtime.ExceptionServices;
-using System.Security.Cryptography;
 
 namespace Playground.Projects.Yahtzee.Models;
 
@@ -43,7 +41,7 @@ public record YahzeeCup : CupOfDice
     public YahzeeCup () : base(5)
     {}
     
-    // Returns the highest-scoring valid combination for the current dice
+
     public YahzeeCup GetYahtzeeCombination() =>
         dice.Count != 5
             ? new NoCombination() { dice = this.dice }
@@ -51,7 +49,7 @@ public record YahzeeCup : CupOfDice
                 .OrderByDescending(c => c.Score)
                 .First();
 
-    // Returns all combinations that are valid for the current dice roll
+
     public ImmutableList<YahzeeCup> GetAllValidCombinations()
     {
         bool isThreeOfAKind = dicePipGroups.Any(g => g.Count() >= 3);
@@ -83,7 +81,7 @@ public record YahzeeCup : CupOfDice
         return combos.ToImmutableList();
     }
     
-    // Returns the best scoring combo still available on the scorecard, or a sacrifice category
+
     public (string Category, int Score) GetBestAvailableCombo(ScoreCard scoreCard)
     {
         var best = GetAllValidCombinations()

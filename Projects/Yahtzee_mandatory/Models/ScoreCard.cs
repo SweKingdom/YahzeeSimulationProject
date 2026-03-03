@@ -22,7 +22,7 @@ public record ScoreCard
     public int UpperSectionTotal =>
         Scores.Where(kvp => UpperSection.Contains(kvp.Key)).Sum(kvp => kvp.Value);
 
-    // 35 bonus points if the player scored at least 63 in the upper section
+    // 35 bonus if upper section >= 63
     public int UpperBonus => UpperSectionTotal >= 63 ? 35 : 0;
 
     public int YahtzeeBonusCount { get; init; } = 0;
