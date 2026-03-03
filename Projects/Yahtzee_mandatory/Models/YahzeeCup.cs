@@ -42,52 +42,67 @@ public record YahzeeCup : CupOfDice
         };
     public YahzeeCup () : base(5)
     {}
+    
+    // Returns the highest-scoring valid combination for the current dice
+    public YahzeeCup GetYahtzeeCombination() =>
+        dice.Count != 5
+            ? new NoCombination() { dice = this.dice }
+            : GetAllValidCombinations()
+                .OrderByDescending(c => c.Score)
+                .First();
 
-    public YahzeeCup GetYahtzeeCombination()
+    // Returns all combinations that are valid for the current dice roll
+    public ImmutableList<YahzeeCup> GetAllValidCombinations()
     {
-        if (dice.Count() != 5)
-            return new NoCombination() {dice = this.dice};
-
-        bool isOnes = sortedDicePips.Any(pip => pip == DiePip.One);
-        bool isTwos = sortedDicePips.Any(pip => pip == DiePip.Two);
-        bool isThrees = sortedDicePips.Any(pip => pip == DiePip.Three);
-        bool isFours = sortedDicePips.Any(pip => pip == DiePip.Four);
-        bool isFives = sortedDicePips.Any(pip => pip == DiePip.Five);
-        bool isSixes = sortedDicePips.Any(pip => pip == DiePip.Six);
-
-
         bool isThreeOfAKind = dicePipGroups.Any(g => g.Count() >= 3);
-        bool isFourOfAKind = dicePipGroups.Any(group => group.Count() == 4);
-        bool isFullHouse = dicePipGroups.Any(group => group.Count() == 3) && dicePipGroups.Any(group => group.Count() == 2);
-       
-        bool isSmallStraight =  straightsCombinations
+        bool isFourOfAKind  = dicePipGroups.Any(g => g.Count() >= 4);
+        bool isFullHouse    = dicePipGroups.Any(g => g.Count() == 3) && dicePipGroups.Any(g => g.Count() == 2);
+        bool isSmallStraight = straightsCombinations
             .Where(kvp => kvp.Key.StartsWith("SmallStraight"))
             .Any(kvp => kvp.Value.All(pip => sortedDicePips.Contains(pip)));
-       
-        bool isLargeStraight =  straightsCombinations
+        bool isLargeStraight = straightsCombinations
             .Where(kvp => kvp.Key.StartsWith("LargeStraight"))
             .Any(kvp => kvp.Value.All(pip => sortedDicePips.Contains(pip)));
-
         bool isYahtzee = dicePipGroups.Any(g => g.Count() == 5);
 
-        return (isYahtzee, isLargeStraight, isSmallStraight, isFullHouse, isFourOfAKind, isThreeOfAKind,
-             isSixes, isFives, isFours, isThrees, isTwos, isOnes) switch
-        {
-            (true, _, _, _, _, _, _, _, _, _, _, _) => new Yahtzee() {dice = this.dice},
-            (_, true, _, _, _, _, _, _, _, _, _, _) => new LargeStraight () {dice = this.dice},
-            (_, _, true, _, _, _, _, _, _, _, _, _) => new SmallStraight() {dice = this.dice},
-            (_, _, _, true, _, _, _, _, _, _, _, _) => new FullHouse() {dice = this.dice},
-            (_, _, _, _, true, _, _, _, _, _, _, _) => new FourOfAKind() {dice = this.dice},
-            (_, _, _, _, _, true, _, _, _, _, _, _) => new ThreeOfAKind() {dice = this.dice},
-            (_, _, _, _, _, _, true, _, _, _, _, _) => new Sixes() {dice = this.dice},
-            (_, _, _, _, _, _, _, true, _, _, _, _) => new Fives() {dice = this.dice},
-            (_, _, _, _, _, _, _, _, true, _, _, _) => new Fours() {dice = this.dice},
-            (_, _, _, _, _, _, _, _, _, true, _, _) => new Threes() {dice = this.dice},
-            (_, _, _, _, _, _, _, _, _, _, true, _) => new Twos() {dice = this.dice},
-            (_, _, _, _, _, _, _, _, _, _, _, true) => new Ones() {dice = this.dice},
-            _ => new Chance() {dice = this.dice}
-        };  
+        var combos = new List<YahzeeCup>();
+        if (isYahtzee)      combos.Add(new Yahtzee()       { dice = dice });
+        if (isLargeStraight)combos.Add(new LargeStraight() { dice = dice });
+        if (isSmallStraight)combos.Add(new SmallStraight() { dice = dice });
+        if (isFullHouse)    combos.Add(new FullHouse()     { dice = dice });
+        if (isFourOfAKind)  combos.Add(new FourOfAKind()   { dice = dice });
+        if (isThreeOfAKind) combos.Add(new ThreeOfAKind()  { dice = dice });
+        // Upper section and Chance are always valid (score naturally handles 0 when no matching dice)
+        combos.Add(new Sixes()  { dice = dice });
+        combos.Add(new Fives()  { dice = dice });
+        combos.Add(new Fours()  { dice = dice });
+        combos.Add(new Threes() { dice = dice });
+        combos.Add(new Twos()   { dice = dice });
+        combos.Add(new Ones()   { dice = dice });
+        combos.Add(new Chance() { dice = dice });
+        return combos.ToImmutableList();
     }
+    
+    // Returns the best scoring combo still available on the scorecard, or a sacrifice category
+    public (string Category, int Score) GetBestAvailableCombo(ScoreCard scoreCard)
+    {
+        var best = GetAllValidCombinations()
+            .Where(c => scoreCard.IsAvailable(c.GetType().Name))
+            .OrderByDescending(c => c.Score)
+            .FirstOrDefault();
+
+        if (best != null)
+            return (best.GetType().Name, best.Score);
+
+        // All scoring combos used — sacrifice any remaining available category (score 0)
+        var sacrifice = new[]
+            { "Chance", "Ones", "Twos", "Threes", "Fours", "Fives", "Sixes",
+                "ThreeOfAKind", "FourOfAKind", "FullHouse", "SmallStraight", "LargeStraight", "Yahtzee" }
+            .FirstOrDefault(cat => scoreCard.IsAvailable(cat));
+
+        return (sacrifice ?? "Chance", 0);
+    }
+    
 }
 
 //Disciminators for yahtzee combinations
